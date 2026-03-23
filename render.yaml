@@ -1,0 +1,19 @@
+# === RENDER BLUEPRINT ===
+# Sube este archivo al repo y Render detecta automáticamente la config
+services:
+  - type: web
+    name: sanate-wa-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
