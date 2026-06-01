@@ -194,6 +194,32 @@ async function syncInitialChats(chatsData) {
   return { synced, errors };
 }
 
+// ========================================================
+// TRACK WAZAP COIN - 1 coin verde por conversacion 24h
+// Difusiones gratis. Botones interactivos cuentan como conversacion
+// ========================================================
+async function trackWazapCoin(chatJid, eventType = 'message', isBroadcast = false) {
+  if (!supabase) return null;
+  const storeId = process.env.STORE_ID || process.env.SANATE_STORE_ID;
+  if (!storeId) return null;
+  try {
+    const { data, error } = await supabase.rpc('track_wazap_coin', {
+      p_store_id: storeId,
+      p_chat_jid: chatJid,
+      p_event_type: eventType,
+      p_is_broadcast: isBroadcast
+    });
+    if (error) {
+      console.warn('[track_wazap] ' + error.message);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn('[track_wazap] ' + e.message);
+    return null;
+  }
+}
+
 module.exports = {
   initSupabase,
   getSupabase,
@@ -201,5 +227,7 @@ module.exports = {
   upsertChat,
   getChats,
   getMessages,
-  syncInitialChats
+  syncInitialChats,
+  trackWazapCoin
 };
+
