@@ -27,7 +27,8 @@ const fs = require('fs');
 const {
   saveMessage,
   upsertChat,
-  syncInitialChats
+  syncInitialChats,
+  trackWazapCoin
 } = require('./supabase');
 
 // === ESTADO GLOBAL ===
@@ -178,7 +179,21 @@ async function connectToWhatsApp() {
         typeof timestamp === 'object' ? timestamp.low || timestamp : timestamp
       );
 
-      // 3. Emitir SSE para el dashboard (TIEMPO REAL)
+      // 3. WaZap tracking: solo cobra mensajes entrantes de chat 1-a-1 (no grupos)
+      //    Difusion = gratis. Boton interactivo = cuenta como inicio de conversacion 24h.
+      if (!fromMe && !isGroup) {
+        const isButton = isInteractiveButtonReply(msg);
+        const eventType = isButton ? 'interactive_button' : 'message';
+        trackWazapCoin(chatId, eventType, false).then(function (res) {
+          if (res && res.charged) {
+            console.log('[wazap] +1 coin (' + eventType + ') chat=' + chatId.slice(0,15) + ' remaining=' + (res.remaining_coins ?? '?'));
+          } else if (res && res.blocked) {
+            console.log('[wazap] BLOCKED plan ' + (res.plan || '?') + ' chat=' + chatId.slice(0,15));
+          }
+        }).catch(function () {});
+      }
+
+      // 4. Emitir SSE para el dashboard (TIEMPO REAL)
       sseManager?.broadcast({
         type: 'message',
         data: {
@@ -330,6 +345,19 @@ async function runInitialSync() {
 // FUNCIONES AUXILIARES
 // ===================================================
 
+function isInteractiveButtonReply(msg) {
+  const m = msg.message;
+  if (!m) return false;
+  const inner = m.ephemeralMessage?.message
+    || m.viewOnceMessage?.message
+    || m.viewOnceMessageV2?.message
+    || m;
+  return !!(inner.buttonsResponseMessage
+    || inner.templateButtonReplyMessage
+    || inner.listResponseMessage
+    || inner.interactiveResponseMessage);
+}
+
 function extractText(msg) {
   const m = msg.message;
   if (!m) return null;
@@ -448,3 +476,4 @@ module.exports = {
   contactCache,
   photoCache
 };
+
