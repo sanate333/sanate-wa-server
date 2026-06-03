@@ -31,6 +31,8 @@ const {
   trackWazapCoin
 } = require('./supabase');
 
+const { processIncomingForAI } = require('./ai-handler');
+
 // === ESTADO GLOBAL ===
 let sock = null;
 let qrCode = null;
@@ -193,7 +195,12 @@ async function connectToWhatsApp() {
         }).catch(function () {});
       }
 
-      // 4. Emitir SSE para el dashboard (TIEMPO REAL)
+      // 3.5 AI Handler: debounce + throttle + typing simulation (best practices 2026)
+            if (!fromMe && !isGroup && messageText && messageText.length > 0) {
+                      processIncomingForAI(supabaseClient, sock, chatId, messageText, msg.key.id);
+            }
+      
+            // 4. Emitir SSE para el dashboard (TIEMPO REAL)
       sseManager?.broadcast({
         type: 'message',
         data: {
